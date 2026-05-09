@@ -1,7 +1,7 @@
 import Link from "next/link";
 const Nav = () => {
   return (
-    <header className="relative z-1000 mb-3 flex h-16 w-full flex-row items-center justify-between bg-white px-0 py-3 text-black">
+    <header className="relative z-1000 mb-3 flex h-16 w-full flex-row items-center justify-between bg-transparent px-0 py-3 text-black">
       <div className="flex flex-row pt-1 scale-75 justify-center items-center">
        <Link href="/" className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md transition-colors h-9 px-4 py-2 font-semibold text-sm mr-2 line-clamp-4 leading-[16px] text-[#1A1B1C]">sKINsTRIC </Link>
        [<p className="text-[#1A1B1C83] text-opacity-70 font-semibold text-sm ml-1.5 mr-1.5">INTRO</p>]
