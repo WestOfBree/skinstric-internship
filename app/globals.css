@@ -15,5 +15,5 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: "Roobert", Arial, Helvetica, sans-serif;
+  font-family: "Roobert", var(--font-geist-sans), sans-serif;
 }
