@@ -18,6 +18,13 @@ const SelectPage = () => {
       <Nav />
       <main className="relative flex min-h-[calc(100vh-88px)] items-center justify-center px-6 md:px-12">
         {/* Back button */}
+        <h1 className="absolute left-4 top-0 text-[16px] font-semibold uppercase text-[#1A1B1C] md:left-10">
+          A.I. Analysis
+        </h1>
+        <h2 className="absolute left-4 top-6 text-[14px] font-normal uppercase text-[#1A1B1C] md:left-10">
+          A. I. has estimated the following. <br />
+          Fix estimated information if needed.
+        </h2>
         <div className="absolute bottom-6 left-6 md:bottom-3 md:left-12">
           <Link
             href="/results"

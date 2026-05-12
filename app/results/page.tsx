@@ -1,5 +1,8 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState, useRef } from "react";
 import buttonIcon from "@/public/button-icon-shrunk.svg";
 import Nav from "@/app/Components/Nav";
 import cameraIcon from "@/public/camera-icon.svg";
@@ -7,12 +10,62 @@ import galleryIcon from "@/public/gallery-icon.svg";
 import galleryTitle from "@/public/gallery-title.svg";
 import cameraTitle from "@/public/camera-title.svg";
 import DiamondStack from "@/app/Components/DiamondStack";
+import axios from "axios";
 
 
 const ResultsPage = () => {
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [, setIsLoading] = useState(true);
+  const [, setApiData] = useState<Record<string, unknown>[]>([]);
+
+  // API access
+  useEffect(() => {
+      axios
+        .get(
+          "https://us-central1-api-skinstric-ai.cloudfunctions.net/skinstricPhaseTwo"
+        )
+        .then((response) => {
+  
+          setApiData(response.data);
+          setIsLoading(false);
+        })
+        .catch((error) => {
+          console.error("Error fetching data:", error);
+          setIsLoading(false);
+        });
+    }, []);
+
+  // Handle file selection and convert to base64
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64String = e.target?.result as string;
+      setUploadedImage(base64String);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Trigger file input on click
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
   return (
     <div className="h-screen overflow-y-clip bg-white text-black">
       <Nav />
+
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        className="hidden"
+        aria-label="Upload image file"
+      />
 
       <main className="relative flex h-[calc(100vh-88px)] items-center justify-around px-6 md:px-12">
         <h1 className="absolute left-4 top-0 text-[12px] font-semibold uppercase text-[#1A1B1C] md:left-10">
@@ -22,8 +75,17 @@ const ResultsPage = () => {
         {/* Preview box — top-right under nav */}
         <div
           aria-label="Preview"
-          className="absolute right-6 top-0 z-30 w-32 h-38 border border-[#1A1B1C]/20 bg-[#F5F5F5] md:right-12"
-        />
+          className="absolute right-6 top-0 z-30 w-32 h-38 border border-[#1A1B1C]/20 bg-[#F5F5F5] md:right-12 flex items-center justify-center overflow-hidden"
+        >
+          {uploadedImage && (
+            <Image
+              src={uploadedImage}
+              alt="Uploaded preview"
+              fill
+              className="w-full h-full object-cover"
+            />
+          )}
+        </div>
 
         {/* Back button */}
         <div className="absolute bottom-6 left-6 md:bottom-3 md:left-12">
@@ -46,7 +108,13 @@ const ResultsPage = () => {
         </div>
 
         {/* Proceed button */}
-        <div className="absolute bottom-6 right-6 z-30 md:bottom-3 md:right-12">
+        <div
+          className={`absolute bottom-6 right-6 z-30 transition-all duration-900 ease-in-out md:bottom-3 md:right-12 ${
+            uploadedImage
+              ? "translate-x-0 opacity-100"
+              : "pointer-events-none -translate-x-10 opacity-0"
+          }`}
+        >
           <Link
             href="/select"
             aria-label="Proceed"
@@ -76,7 +144,7 @@ const ResultsPage = () => {
             />
           </div>
 
-          <div className="relative flex-none">
+          <div className="relative flex-none cursor-pointer" onClick={handleUploadClick}>
             <DiamondStack icon={galleryIcon} />
             <Image
               src={galleryTitle}
