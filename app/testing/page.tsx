@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import buttonIcon from "@/public/button-icon-shrunk.svg";
 import Nav from "@/app/Components/Nav";
+import axios from "axios";
 
 type InputStep = "name" | "city" | "processing" | "done";
 
@@ -15,6 +16,39 @@ const TestingPage = () => {
 	const [step, setStep] = useState<InputStep>("name");
 	const [nameValue, setNameValue] = useState("");
 	const [cityValue, setCityValue] = useState("");
+	const [, setPhaseOneData] = useState<Record<string, unknown>[]>([]);
+
+	useEffect(() => {
+		if (step !== "done") {
+			return;
+		}
+
+		const userName = window.localStorage.getItem(NAME_STORAGE_KEY);
+		const userCity = window.localStorage.getItem(CITY_STORAGE_KEY);
+
+		if (!userName || !userCity) {
+			console.warn("User name or city not set");
+			return;
+		}
+
+		axios
+			.get(
+				"https://us-central1-api-skinstric-ai.cloudfunctions.net/skinstricPhaseOne",
+				{
+					params: {
+						userName,
+						userCity,
+					},
+				}
+			)
+			.then((response) => {
+				setPhaseOneData(response.data);
+				console.log("Phase One Data:", response.data);
+			})
+			.catch((error) => {
+				console.error("Error fetching data:", error);
+			});
+	}, [step]);
 
 	useEffect(() => {
 		if (step !== "processing") {

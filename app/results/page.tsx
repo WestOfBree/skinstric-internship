@@ -16,23 +16,36 @@ import axios from "axios";
 const ResultsPage = () => {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [, setIsLoading] = useState(true);
-  const [, setApiData] = useState<Record<string, unknown>[]>([]);
+  const [, setPhaseTwoData] = useState<Record<string, unknown>[]>([]);
 
   // API access
   useEffect(() => {
+      const NAME_STORAGE_KEY = "skinstric:userName";
+      const CITY_STORAGE_KEY = "skinstric:userCity";
+      const userName = window.localStorage.getItem(NAME_STORAGE_KEY);
+      const userCity = window.localStorage.getItem(CITY_STORAGE_KEY);
+
+      if (!userName || !userCity) {
+        console.warn("User name or city not set");
+        return;
+      }
+
       axios
         .get(
-          "https://us-central1-api-skinstric-ai.cloudfunctions.net/skinstricPhaseTwo"
+          "https://us-central1-api-skinstric-ai.cloudfunctions.net/skinstricPhaseTwo",
+          {
+            params: {
+              userName,
+              userCity,
+            },
+          }
         )
         .then((response) => {
   
-          setApiData(response.data);
-          setIsLoading(false);
+          setPhaseTwoData(response.data);
         })
         .catch((error) => {
           console.error("Error fetching data:", error);
-          setIsLoading(false);
         });
     }, []);
 
