@@ -86,8 +86,8 @@ const NonRotatingDiamondStack = ({
     <div
       className="absolute left-1/2 top-1/2 transition-all duration-300"
       style={{
-        width: "67%",
-        height: "67%",
+        width: "73%",
+        height: "73%",
         opacity: activeOption === "preferences" ? 1 : 0,
         transform: `translate(-50%, -50%) rotate(45deg) scale(${activeOption === "preferences" ? 1 : 0.72})`,
       }}

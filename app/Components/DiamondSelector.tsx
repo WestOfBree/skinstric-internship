@@ -10,7 +10,7 @@ const DiamondSelector = ({
   onOptionHover,
 }: DiamondSelectorProps) => (
   <div
-    className="relative flex h-[min(325px,31vw)] w-[min(325px,31vw)] items-center justify-center rotate-45"
+    className="relative flex h-[min(325px,31vw)] w-[min(325px,31vw)] items-center justify-center rotate-45 text-[#1A1B1C] tracking-tight uppercase  font-semibold leading-6"
     style={{ fontFamily: '"Roobert", var(--font-geist-sans), sans-serif' }}
   >
     {/* Grid container - 2x2 with gaps */}
@@ -26,7 +26,7 @@ const DiamondSelector = ({
       >
         {/* Label - counter-rotate */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-45 pointer-events-none">
-          <span className="text-xs font-semibold whitespace-nowrap text-[#1A1B1C]">Demographics</span>
+          <span className="whitespace-nowrap text-[#1A1B1C]">Demographics</span>
         </div>
       </div>
 
@@ -41,7 +41,7 @@ const DiamondSelector = ({
       >
         {/* Label - counter-rotate */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-45 pointer-events-none">
-          <span className="text-xs font-semibold whitespace-nowrap text-[#1A1B1C]" style={{ fontSize: "12px" }}>
+          <span className=" whitespace-nowrap text-[#1A1B1C]" >
             Skin Type Details
           </span>
         </div>
@@ -58,7 +58,7 @@ const DiamondSelector = ({
       >
         {/* Label - counter-rotate */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-45 pointer-events-none text-center leading-tight">
-          <span className="text-xs font-semibold text-[#1A1B1C]" style={{ fontSize: "12px" }}>
+          <span className="">
             Cosmetic <br /> Concerns
           </span>
         </div>
@@ -75,7 +75,7 @@ const DiamondSelector = ({
       >
         {/* Label - counter-rotate */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-45 pointer-events-none">
-          <span className="text-xs font-semibold whitespace-nowrap text-[#1A1B1C]" style={{ fontSize: "12px" }}>
+          <span className="whitespace-nowrap">
             Weather
           </span>
         </div>
