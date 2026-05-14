@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState, useRef } from "react";
+import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import buttonIcon from "@/public/button-icon-shrunk.svg";
 import Nav from "@/app/Components/Nav";
 import cameraIcon from "@/public/camera-icon.svg";
@@ -16,43 +17,31 @@ import axios from "axios";
 const ResultsPage = () => {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+  const [isPhaseTwoSubmitting, setIsPhaseTwoSubmitting] = useState(false);
+  const [hasTriedProceedWithoutImage, setHasTriedProceedWithoutImage] = useState(false);
+  const [phaseTwoError, setPhaseTwoError] = useState("");
   const [, setPhaseTwoData] = useState<Record<string, unknown>[]>([]);
 
-  // API access
-  useEffect(() => {
-      const NAME_STORAGE_KEY = "skinstric:userName";
-      const CITY_STORAGE_KEY = "skinstric:userCity";
-      const userName = window.localStorage.getItem(NAME_STORAGE_KEY);
-      const userCity = window.localStorage.getItem(CITY_STORAGE_KEY);
-
-      if (!userName || !userCity) {
-        console.warn("User name or city not set");
-        return;
+  const submitPhaseTwo = async (name: string, city: string, image: string) => {
+    const response = await axios.post(
+      "https://us-central1-api-skinstric-ai.cloudfunctions.net/skinstricPhaseTwo",
+      {
+        name,
+        location: city,
+        image,
       }
+    );
 
-      axios
-        .get(
-          "https://us-central1-api-skinstric-ai.cloudfunctions.net/skinstricPhaseTwo",
-          {
-            params: {
-              userName,
-              userCity,
-            },
-          }
-        )
-        .then((response) => {
-  
-          setPhaseTwoData(response.data);
-        })
-        .catch((error) => {
-          console.error("Error fetching data:", error);
-        });
-    }, []);
+    setPhaseTwoData(response.data);
+  };
 
   // Handle file selection and convert to base64
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    setHasTriedProceedWithoutImage(false);
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -66,6 +55,47 @@ const ResultsPage = () => {
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
+
+  const handleProceed = async () => {
+    if (isPhaseTwoSubmitting) {
+      return;
+    }
+
+    if (!uploadedImage) {
+      setHasTriedProceedWithoutImage(true);
+      return;
+    }
+
+    const NAME_STORAGE_KEY = "skinstric:userName";
+    const CITY_STORAGE_KEY = "skinstric:userCity";
+    const userName = window.localStorage.getItem(NAME_STORAGE_KEY);
+    const userCity = window.localStorage.getItem(CITY_STORAGE_KEY);
+
+    if (!userName || !userCity) {
+      console.warn("User name or city not set");
+      setPhaseTwoError("Missing profile details. Please return and enter your name and city.");
+      return;
+    }
+
+    setPhaseTwoError("");
+    setIsPhaseTwoSubmitting(true);
+
+    try {
+      await submitPhaseTwo(userName, userCity, uploadedImage);
+      router.push("/select");
+    } catch (error) {
+      const apiErrorMessage =
+        axios.isAxiosError(error) && typeof error.response?.data?.message === "string"
+          ? error.response.data.message
+          : "Unable to load your analysis data right now. Please try again.";
+
+      setPhaseTwoError(apiErrorMessage);
+      console.error("Error posting data:", error);
+    } finally {
+      setIsPhaseTwoSubmitting(false);
+    }
+  };
+
   return (
     <div className="h-screen overflow-y-clip bg-white text-black">
       <Nav />
@@ -84,6 +114,21 @@ const ResultsPage = () => {
         <h1 className="absolute left-4 top-0 text-[12px] font-semibold uppercase text-[#1A1B1C] md:left-10">
           A.I. Analysis
         </h1>
+        {isPhaseTwoSubmitting && (
+          <p className="absolute left-4 top-6 text-xs font-semibold uppercase tracking-[0.12em] text-[#1A1B1C] md:left-10">
+            Syncing profile...
+          </p>
+        )}
+        {phaseTwoError && (
+          <p className="absolute left-4 top-6 max-w-xs text-xs font-semibold uppercase tracking-[0.12em] text-[#B42318] md:left-10">
+            {phaseTwoError}
+          </p>
+        )}
+        {hasTriedProceedWithoutImage && (
+          <p className="absolute right-6 bottom-14 max-w-xs text-right text-xs font-semibold uppercase tracking-[0.12em] text-[#B42318] md:right-12">
+            Image is required.
+          </p>
+        )}
 
         {/* Preview box — top-right under nav */}
         <div
@@ -121,19 +166,17 @@ const ResultsPage = () => {
         </div>
 
         {/* Proceed button */}
-        <div
-          className={`absolute bottom-6 right-6 z-30 transition-all duration-900 ease-in-out md:bottom-3 md:right-12 ${
-            uploadedImage
-              ? "translate-x-0 opacity-100"
-              : "pointer-events-none -translate-x-10 opacity-0"
-          }`}
-        >
-          <Link
-            href="/select"
+        <div className="absolute bottom-6 right-6 z-30 transition-all duration-900 ease-in-out md:bottom-3 md:right-12">
+          <button
+            type="button"
             aria-label="Proceed"
-            className="group inline-flex h-9 items-center justify-center gap-4 whitespace-nowrap rounded-md text-sm font-semibold text-[#1A1B1C] transition-colors"
+            onClick={() => {
+              void handleProceed();
+            }}
+            className="group inline-flex h-9 items-center justify-center gap-4 whitespace-nowrap rounded-md text-sm font-semibold text-[#1A1B1C] transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isPhaseTwoSubmitting}
           >
-            PROCEED
+            {isPhaseTwoSubmitting ? "SYNCING..." : "PROCEED"}
             <div className="relative ml-2 inline-block h-13.5 w-13.5 shrink-0 transition-transform duration-700 ease-in-out group-hover:scale-125">
               <Image
                 src={buttonIcon}
@@ -143,7 +186,7 @@ const ResultsPage = () => {
                 className="object-contain"
               />
             </div>
-          </Link>
+          </button>
         </div>
 
         {/* Two diamond stacks */}

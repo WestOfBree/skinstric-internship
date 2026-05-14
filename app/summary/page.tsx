@@ -110,7 +110,7 @@ const SummaryPage = () => {
         <h1 className="text-base md:text-base mb-1 leading-6 font-semibold text-[#1A1B1C]">
           A.I. Analysis
         </h1>
-        <h3 className="text-4xl md:text-[72px] tracking-tighter font-normal text-[#1A1B1C]">
+        <h3 className="text-4xl md:text-[64px] tracking-tighter font-normal text-[#1A1B1C]">
           Demographics
         </h3>
         <h2 className="text-[14px] font-normal text-[#1A1B1C] leading-6">
@@ -121,10 +121,10 @@ const SummaryPage = () => {
         {/* grid class */}
         <div className="grid md:grid-cols-[1.5fr_8.5fr_3.15fr] mx-5 px-4 gap-4 mt-10 mb-40 md:gap-4 pb-0 md:pb-0 md:mb-0">
           {/* Left Section - Selector Buttons */}
-          <div className="bg-white-100 spacey-3 md:flex md:flex-col h-[62%]">
-            <button
+          <div className="bg-white-100 md:flex md:flex-col h-[62%] space-y-3 justify-between">
+            <div
               onClick={() => setActiveSelector("race")}
-              className={`p-3 cursor-pointer text-left text-sm font-semibold justify-between transition-colors ${
+              className={`p-3 cursor-pointer text-left text-sm font-semibold justify-between transition-colors flex-1 flex flex-col border-t ${
                 activeSelector === "race"
                   ? "bg-[#1A1B1C] text-white"
                   : "bg-[#F3F3F4] hover:bg-[#E1E1E2] text-[#1A1B1C]"
@@ -133,31 +133,33 @@ const SummaryPage = () => {
             >
               <p className="text-base">Black</p>
               <h4 className="text-base">RACE</h4>
-            </button>
+            </div>
 
-            <button
+            <div
               onClick={() => setActiveSelector("age")}
-              className={`p-3 cursor-pointer text-left text-sm font-semibold transition-colors ${
+              className={`p-3 cursor-pointer text-left text-sm font-semibold transition-colors justify-between flex-1 flex flex-col border-t ${
                 activeSelector === "age"
                   ? "bg-[#1A1B1C] text-white"
                   : "bg-[#F3F3F4] hover:bg-[#E1E1E2] text-[#1A1B1C]"
               }`}
               aria-label="Select age section"
             >
-              AGE
-            </button>
+              <p className="text-base">25-34</p>
+              <h4 className="text-base">AGE</h4>
+            </div>
 
-            <button
+            <div
               onClick={() => setActiveSelector("sex")}
-              className={`p-3 cursor-pointer text-left text-sm font-semibold transition-colors ${
+              className={`p-3 cursor-pointer text-left text-sm font-semibold transition-colors justify-between flex-1 flex flex-col border-t ${
                 activeSelector === "sex"
                   ? "bg-[#1A1B1C] text-white"
                   : "bg-[#F3F3F4] hover:bg-[#E1E1E2] text-[#1A1B1C]"
               }`}
               aria-label="Select sex section"
             >
-              SEX
-            </button>
+             <p className="text-base">Female</p>
+              <h4 className="text-base">SEX</h4>
+            </div>
           </div>
 
           {/* Middle Section - Main Content */}

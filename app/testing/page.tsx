@@ -16,39 +16,21 @@ const TestingPage = () => {
 	const [step, setStep] = useState<InputStep>("name");
 	const [nameValue, setNameValue] = useState("");
 	const [cityValue, setCityValue] = useState("");
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [errorMessage, setErrorMessage] = useState("");
 	const [, setPhaseOneData] = useState<Record<string, unknown>[]>([]);
 
-	useEffect(() => {
-		if (step !== "done") {
-			return;
-		}
+	const submitPhaseOne = async (name: string, city: string) => {
+		const response = await axios.post(
+			"https://us-central1-api-skinstric-ai.cloudfunctions.net/skinstricPhaseOne",
+			{
+				name,
+				location: city,
+			}
+		);
 
-		const userName = window.localStorage.getItem(NAME_STORAGE_KEY);
-		const userCity = window.localStorage.getItem(CITY_STORAGE_KEY);
-
-		if (!userName || !userCity) {
-			console.warn("User name or city not set");
-			return;
-		}
-
-		axios
-			.get(
-				"https://us-central1-api-skinstric-ai.cloudfunctions.net/skinstricPhaseOne",
-				{
-					params: {
-						userName,
-						userCity,
-					},
-				}
-			)
-			.then((response) => {
-				setPhaseOneData(response.data);
-				console.log("Phase One Data:", response.data);
-			})
-			.catch((error) => {
-				console.error("Error fetching data:", error);
-			});
-	}, [step]);
+		setPhaseOneData(response.data);
+	};
 
 	useEffect(() => {
 		if (step !== "processing") {
@@ -65,28 +47,54 @@ const TestingPage = () => {
 		};
 	}, [step]);
 
-	const handleEnter = () => {
+	const handleEnter = async () => {
+		if (isSubmitting) {
+			return;
+		}
+
 		if (step === "name") {
 			const trimmedName = nameValue.trim();
 
 			if (!trimmedName) {
+				setErrorMessage("Please enter your name.");
 				return;
 			}
 
-			window.localStorage.setItem(NAME_STORAGE_KEY, trimmedName);
+			setErrorMessage("");
+			setNameValue(trimmedName);
 			setStep("city");
 			return;
 		}
 
 		if (step === "city") {
+			const trimmedName = nameValue.trim();
 			const trimmedCity = cityValue.trim();
 
-			if (!trimmedCity) {
+			if (!trimmedName || !trimmedCity) {
+				setErrorMessage("Please enter both name and city.");
 				return;
 			}
 
-			window.localStorage.setItem(CITY_STORAGE_KEY, trimmedCity);
-			setStep("processing");
+			setErrorMessage("");
+			setIsSubmitting(true);
+
+			try {
+				await submitPhaseOne(trimmedName, trimmedCity);
+				window.localStorage.setItem(NAME_STORAGE_KEY, trimmedName);
+				window.localStorage.setItem(CITY_STORAGE_KEY, trimmedCity);
+				setCityValue(trimmedCity);
+				setStep("processing");
+			} catch (error) {
+				const apiErrorMessage =
+					axios.isAxiosError(error) && typeof error.response?.data?.message === "string"
+						? error.response.data.message
+						: "Unable to save your details right now. Please try again.";
+
+				setErrorMessage(apiErrorMessage);
+				console.error("Error posting data:", error);
+			} finally {
+				setIsSubmitting(false);
+			}
 		}
 	};
 
@@ -96,7 +104,7 @@ const TestingPage = () => {
 		}
 
 		event.preventDefault();
-		handleEnter();
+		void handleEnter();
 	};
 
 	return (
@@ -228,7 +236,7 @@ const TestingPage = () => {
 						</div>
 
 						<div
-							className={`absolute left-1/2 top-1/2 z-20 flex h-16.25 w-full max-w-108 -translate-x-1/2 -translate-y-1/2 items-center justify-center bg-transparent pt-1 ${
+							className={`absolute left-1/2 top-1/2 z-20 flex h-16.25 w-full max-w-md -translate-x-1/2 -translate-y-1/2 items-center justify-center bg-transparent pt-1 ${
 								step === "name" || step === "city" ? "border-b border-[#1A1B1C]" : ""
 							}`}
 						>
@@ -246,6 +254,7 @@ const TestingPage = () => {
 										id="analysis-input"
 										name="analysis-input"
 										type="text"
+										disabled={isSubmitting}
 										placeholder={step === "name" ? "Introduce Yourself" : "your city name"}
 										value={step === "name" ? nameValue : cityValue}
 										onChange={(event) => {
@@ -277,6 +286,11 @@ const TestingPage = () => {
 								</div>
 							)}
 						</div>
+						{errorMessage && (step === "name" || step === "city") && (
+							<p className="mt-6 max-w-lg text-center text-sm text-[#B42318]" role="alert" aria-live="polite">
+								{errorMessage}
+							</p>
+						)}
 					</div>
 				</section>
 			</main>
