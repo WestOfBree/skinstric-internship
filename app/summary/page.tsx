@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import buttonIcon from "@/public/button-icon-shrunk.svg";
 import Nav from "@/app/Components/Nav";
 import { ProgressCircle } from "../Components/ProgressCircle";
@@ -14,41 +14,223 @@ interface SelectorOption {
   label: string;
 }
 
+type SelectorScores = Record<SelectorType, Record<string, number>>;
+
+interface NumericEntry {
+  keyPath: string;
+  score: number;
+}
+
+const PHASE_TWO_RESULT_STORAGE_KEY = "skinstric:phaseTwoResult";
+
 const raceOptions: SelectorOption[] = [
-  { id: "asian", label: "Asian" },
   { id: "black", label: "Black" },
-  { id: "hispanic", label: "Hispanic" },
-  { id: "middle-eastern", label: "Middle Eastern" },
   { id: "white", label: "White" },
+  { id: "southeast-asian", label: "Southeast Asian" },
+  { id: "south-asian", label: "South Asian" },
+  { id: "east-asian", label: "East Asian" },
+  { id: "latino-hispanic", label: "Latino Hispanic" },
+  { id: "middle-eastern", label: "Middle Eastern" },
+  
 ];
 
 const ageOptions: SelectorOption[] = [
-  { id: "18-25", label: "18-25" },
-  { id: "26-35", label: "26-35" },
-  { id: "36-45", label: "36-45" },
-  { id: "46-55", label: "46-55" },
-  { id: "56-65", label: "56-65" },
-  { id: "65+", label: "65+" },
+  { id: "0-2", label: "0-2" },
+  { id: "3-9", label: "3-9" },
+  { id: "10-19", label: "10-19" },
+  { id: "20-29", label: "20-29" },
+  { id: "30-39", label: "30-39" },
+  { id: "40-49", label: "40-49" },
+  { id: "50-59", label: "50-59" },
+  { id: "60-69", label: "60-69" },
+  { id: "70+", label: "70+" },
 ];
 
 const sexOptions: SelectorOption[] = [
   { id: "male", label: "Male" },
   { id: "female", label: "Female" },
-  { id: "non-binary", label: "Non-binary" },
 ];
 
+const selectorOptionsMap: Record<SelectorType, SelectorOption[]> = {
+  race: raceOptions,
+  age: ageOptions,
+  sex: sexOptions,
+};
+
+const selectorAliases: Record<SelectorType, string[]> = {
+  race: ["race", "ethnicity"],
+  age: ["age"],
+  sex: ["sex", "gender"],
+};
+
+const optionAliases: Record<SelectorType, Record<string, string[]>> = {
+  race: {
+    "asian": ["asian"],
+    "east-asian": ["eastasian", "east-asian", "eastasian"],
+    "south-asian": ["southasian", "south-asian", "southasian"],
+    "southeast-asian": ["southeastasian", "southeast-asian", "southeastasian"],
+    "black": ["black", "africanamerican", "african"],
+    "latino-hispanic": ["hispanic", "latino", "latina", "latinx"],
+    "middle-eastern": ["middleeastern", "middleeast"],
+    "white": ["white", "caucasian"],
+  },
+  age: {
+    "0-2": ["0to2", "0-2", "0_2"],
+    "3-9": ["3to9", "3-9", "3_9"],
+    "10-19": ["10to19", "10-19", "10_19"],
+    "20-29": ["20to29", "20-29", "20_29"],
+    "30-39": ["30to39", "30-39", "30_39"],
+    "40-49": ["40to49", "40-49", "40_49"],
+    "50-59": ["50to59", "50-59", "50_59"],
+    "60-69": ["60to69", "60-69", "60_69"],
+    "70+": ["70plus", "70over", "70+"],
+  },
+  sex: {
+    male: ["male", "man", "m"],
+    female: ["female", "woman", "f"],
+  },
+};
+
+const normalizeKey = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+const parseProbabilityToPercent = (rawValue: number): number => {
+  if (!Number.isFinite(rawValue) || rawValue < 0) {
+    return 0;
+  }
+
+  return rawValue <= 1 ? rawValue * 100 : rawValue;
+};
+
+const createEmptyScores = (): SelectorScores => ({
+  race: Object.fromEntries(raceOptions.map((option) => [option.id, 0])),
+  age: Object.fromEntries(ageOptions.map((option) => [option.id, 0])),
+  sex: Object.fromEntries(sexOptions.map((option) => [option.id, 0])),
+});
+
+const collectNumericEntries = (
+  value: unknown,
+  path: string[] = [],
+  entries: NumericEntry[] = [],
+): NumericEntry[] => {
+  if (typeof value === "number") {
+    entries.push({ keyPath: normalizeKey(path.join(".")), score: parseProbabilityToPercent(value) });
+    return entries;
+  }
+
+  if (!value || typeof value !== "object") {
+    return entries;
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => {
+      collectNumericEntries(item, [...path, String(index)], entries);
+    });
+    return entries;
+  }
+
+  Object.entries(value).forEach(([key, nestedValue]) => {
+    collectNumericEntries(nestedValue, [...path, key], entries);
+  });
+
+  return entries;
+};
+
+const getHighestOptionId = (type: SelectorType, scores: Record<string, number>): string | null => {
+  return selectorOptionsMap[type].reduce<string | null>((highestId, option) => {
+    if (!highestId) {
+      return option.id;
+    }
+
+    return scores[option.id] > scores[highestId] ? option.id : highestId;
+  }, null);
+};
+
+const mapApiResponseToSelectorScores = (responsePayload: unknown): SelectorScores => {
+  const mappedScores = createEmptyScores();
+  const entries = collectNumericEntries(responsePayload);
+
+  (Object.keys(selectorOptionsMap) as SelectorType[]).forEach((selectorType) => {
+    selectorOptionsMap[selectorType].forEach((option) => {
+      // Some UI option ids may not have explicit alias entries; fall back to the id.
+      const aliases = (optionAliases[selectorType][option.id] ?? [option.id]).map(normalizeKey);
+      const selectorHints = selectorAliases[selectorType].map(normalizeKey);
+
+      const matchingEntries = entries.filter((entry) =>
+        aliases.some((alias) => entry.keyPath.includes(alias)),
+      );
+
+      const selectorScopedEntries = matchingEntries.filter((entry) =>
+        selectorHints.some((selectorHint) => entry.keyPath.includes(selectorHint)),
+      );
+
+      const sourceEntries = selectorScopedEntries.length > 0 ? selectorScopedEntries : matchingEntries;
+      if (sourceEntries.length === 0) {
+        return;
+      }
+
+      mappedScores[selectorType][option.id] = sourceEntries.reduce(
+        (highestScore, entry) => Math.max(highestScore, entry.score),
+        0,
+      );
+    });
+  });
+
+  return mappedScores;
+};
+
 const SummaryPage = () => {
-  const [selectedRace, setSelectedRace] = useState<string | null>("black");
+  const [selectedRace, setSelectedRace] = useState<string | null>(null);
   const [selectedAge, setSelectedAge] = useState<string | null>(null);
   const [selectedSex, setSelectedSex] = useState<string | null>(null);
   const [activeSelector, setActiveSelector] = useState<SelectorType>("race");
+  const [selectorScores] = useState<SelectorScores>(() => {
+    if (typeof window === "undefined") {
+      return createEmptyScores();
+    }
 
-  // Calculate total selections for progress
-  const totalSelections = [selectedRace, selectedAge, selectedSex].filter(Boolean).length;
-  const maxSelections = 3;
-  const progressPercentage = Math.round(
-    (totalSelections / maxSelections) * 100,
-  );
+    const rawStoredResponse = window.localStorage.getItem(PHASE_TWO_RESULT_STORAGE_KEY);
+    if (!rawStoredResponse) {
+      return createEmptyScores();
+    }
+
+    try {
+      const parsedResponse = JSON.parse(rawStoredResponse) as unknown;
+      return mapApiResponseToSelectorScores(parsedResponse);
+    } catch (error) {
+      console.error("Unable to parse phase two result from storage", error);
+      return createEmptyScores();
+    }
+  });
+
+  const resolvedSelections = useMemo(() => {
+    const fallbackRace = getHighestOptionId("race", selectorScores.race);
+    const fallbackAge = getHighestOptionId("age", selectorScores.age);
+    const fallbackSex = getHighestOptionId("sex", selectorScores.sex);
+
+    return {
+      race: selectedRace ?? fallbackRace,
+      age: selectedAge ?? fallbackAge,
+      sex: selectedSex ?? fallbackSex,
+    };
+  }, [selectedRace, selectedAge, selectedSex, selectorScores]);
+
+  const progressPercentage = useMemo(() => {
+    const selectedOptionId = resolvedSelections[activeSelector];
+    if (!selectedOptionId) {
+      return 0;
+    }
+
+    return Number(selectorScores[activeSelector][selectedOptionId].toFixed(2));
+  }, [activeSelector, resolvedSelections, selectorScores]);
+
+  const sortedActiveOptions = useMemo(() => {
+    return [...selectorOptionsMap[activeSelector]].sort((firstOption, secondOption) => {
+      const firstScore = selectorScores[activeSelector][firstOption.id] ?? 0;
+      const secondScore = selectorScores[activeSelector][secondOption.id] ?? 0;
+
+      return secondScore - firstScore;
+    });
+  }, [activeSelector, selectorScores]);
 
   const setActiveOption = (type: SelectorType, id: string) => {
     if (type === "race") {
@@ -61,27 +243,11 @@ const SummaryPage = () => {
   };
 
   const getOptionsForSelector = (type: SelectorType): SelectorOption[] => {
-    if (type === "race") {
-      return raceOptions;
-    }
-
-    if (type === "age") {
-      return ageOptions;
-    }
-
-    return sexOptions;
+    return selectorOptionsMap[type];
   };
 
   const getSelectedOptionId = (type: SelectorType): string | null => {
-    if (type === "race") {
-      return selectedRace;
-    }
-
-    if (type === "age") {
-      return selectedAge;
-    }
-
-    return selectedSex;
+    return resolvedSelections[type];
   };
 
   const getSelectedOptionLabel = (type: SelectorType): string => {
@@ -102,6 +268,8 @@ const SummaryPage = () => {
     };
     return labelMap[type];
   };
+
+  const formatPercent = (value: number): string => `${value.toFixed(2)}%`;
 
   return (
     <div className="h-screen md:h-[90vh] flex flex-col md:mt-5 bg-white text-black">
@@ -131,7 +299,7 @@ const SummaryPage = () => {
               }`}
               aria-label="Select race section"
             >
-              <p className="text-base">Black</p>
+              <p className="text-base">{getSelectedOptionLabel("race")}</p>
               <h4 className="text-base">RACE</h4>
             </div>
 
@@ -144,7 +312,7 @@ const SummaryPage = () => {
               }`}
               aria-label="Select age section"
             >
-              <p className="text-base">25-34</p>
+              <p className="text-base">{getSelectedOptionLabel("age")}</p>
               <h4 className="text-base">AGE</h4>
             </div>
 
@@ -157,7 +325,7 @@ const SummaryPage = () => {
               }`}
               aria-label="Select sex section"
             >
-             <p className="text-base">Female</p>
+             <p className="text-base">{getSelectedOptionLabel("sex")}</p>
               <h4 className="text-base">SEX</h4>
             </div>
           </div>
@@ -182,7 +350,7 @@ const SummaryPage = () => {
               <h4>{getSelectorLabel(activeSelector)}</h4>
               <h4>A.I Confidence</h4>
                 </div>
-            {getOptionsForSelector(activeSelector).map((option) => (
+            {sortedActiveOptions.map((option) => (
               <button
                 key={option.id}
                 onClick={() => setActiveOption(activeSelector, option.id)}
@@ -193,7 +361,10 @@ const SummaryPage = () => {
                 }`}
                 aria-label={`Select ${option.label}`}
               >
-                {option.label}
+                <span className="flex items-center justify-between">
+                  <span>{option.label}</span>
+                  <span>{formatPercent(selectorScores[activeSelector][option.id] ?? 0)}</span>
+                </span>
               </button>
             ))}
             </div>
@@ -223,11 +394,11 @@ const SummaryPage = () => {
           </p>
 
           <Link
-            href="/results"
+            href="/"
             aria-label="Proceed"
             className="group inline-flex h-9 items-center justify-center gap-4 whitespace-nowrap rounded-md text-sm font-semibold text-[#1A1B1C] transition-colors"
           >
-            PROCEED
+            HOME
             <div className="relative ml-2 inline-block h-13.5 w-13.5 shrink-0 transition-transform duration-700 ease-in-out group-hover:scale-125">
               <Image
                 src={buttonIcon}

@@ -13,6 +13,7 @@ import cameraTitle from "@/public/camera-title.svg";
 import DiamondStack from "@/app/Components/DiamondStack";
 import axios from "axios";
 
+const PHASE_TWO_RESULT_STORAGE_KEY = "skinstric:phaseTwoResult";
 
 const ResultsPage = () => {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
@@ -21,7 +22,6 @@ const ResultsPage = () => {
   const [isPhaseTwoSubmitting, setIsPhaseTwoSubmitting] = useState(false);
   const [hasTriedProceedWithoutImage, setHasTriedProceedWithoutImage] = useState(false);
   const [phaseTwoError, setPhaseTwoError] = useState("");
-  const [, setPhaseTwoData] = useState<Record<string, unknown>[]>([]);
 
   const submitPhaseTwo = async (name: string, city: string, image: string) => {
     const response = await axios.post(
@@ -33,7 +33,7 @@ const ResultsPage = () => {
       }
     );
 
-    setPhaseTwoData(response.data);
+    return response.data;
   };
 
   // Handle file selection and convert to base64
@@ -81,8 +81,9 @@ const ResultsPage = () => {
     setIsPhaseTwoSubmitting(true);
 
     try {
-      await submitPhaseTwo(userName, userCity, uploadedImage);
-      router.push("/select");
+      const phaseTwoData = await submitPhaseTwo(userName, userCity, uploadedImage);
+      window.localStorage.setItem(PHASE_TWO_RESULT_STORAGE_KEY, JSON.stringify(phaseTwoData));
+      router.push("/summary");
     } catch (error) {
       const apiErrorMessage =
         axios.isAxiosError(error) && typeof error.response?.data?.message === "string"
@@ -173,7 +174,7 @@ const ResultsPage = () => {
             onClick={() => {
               void handleProceed();
             }}
-            className="group inline-flex h-9 items-center justify-center gap-4 whitespace-nowrap rounded-md text-sm font-semibold text-[#1A1B1C] transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+            className=" cursor-pointer group inline-flex h-9 items-center justify-center gap-4 whitespace-nowrap rounded-md text-sm font-semibold text-[#1A1B1C] transition-colors disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isPhaseTwoSubmitting}
           >
             {isPhaseTwoSubmitting ? "SYNCING..." : "PROCEED"}

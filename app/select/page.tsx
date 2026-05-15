@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import Nav from "@/app/Components/Nav";
 import DiamondSelector from "@/app/Components/DiamondSelector";
 import NonRotatingDiamondStack, {
@@ -12,6 +13,7 @@ import buttonIcon from "@/public/button-icon-shrunk.svg";
 
 const SelectPage = () => {
   const [activeOption, setActiveOption] = useState<DiamondOption | null>(null);
+  const router = useRouter();
 
   return (
     <div className="min-h-screen bg-white text-black">
@@ -51,6 +53,9 @@ const SelectPage = () => {
             <DiamondSelector
               activeOption={activeOption}
               onOptionHover={setActiveOption}
+              onDemographicsClick={() => {
+                router.push("/summary");
+              }}
             />
           </div>
         </div>
@@ -58,7 +63,7 @@ const SelectPage = () => {
         {/* Proceed button */}
         <div className="absolute bottom-6 right-6 z-30 md:bottom-3 md:right-12">
           <Link
-            href="/"
+            href="/summary"
             aria-label="Get Summary"
             className="group uppercase inline-flex h-9 items-center justify-center gap-4 whitespace-nowrap rounded-md text-sm font-semibold text-[#1A1B1C] transition-colors"
           >

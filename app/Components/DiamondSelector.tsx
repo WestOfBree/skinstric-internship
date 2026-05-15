@@ -3,11 +3,13 @@ import type { DiamondOption } from "@/app/Components/NonRotatingDiamondStack";
 type DiamondSelectorProps = {
   activeOption: DiamondOption | null;
   onOptionHover: (option: DiamondOption | null) => void;
+  onDemographicsClick?: () => void;
 };
 
 const DiamondSelector = ({
   activeOption,
   onOptionHover,
+  onDemographicsClick,
 }: DiamondSelectorProps) => (
   <div
     className="relative flex h-[min(325px,31vw)] w-[min(325px,31vw)] items-center justify-center rotate-45 text-[#1A1B1C] tracking-tight uppercase  font-semibold leading-6"
@@ -21,8 +23,21 @@ const DiamondSelector = ({
         style={{
           backgroundColor: activeOption === "skinType" ? "#C2C4C9" : "#E1E1E2",
         }}
+        onClick={onDemographicsClick}
         onMouseEnter={() => onOptionHover("skinType")}
         onMouseLeave={() => onOptionHover(null)}
+        role={onDemographicsClick ? "button" : undefined}
+        tabIndex={onDemographicsClick ? 0 : undefined}
+        onKeyDown={
+          onDemographicsClick
+            ? (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onDemographicsClick();
+                }
+              }
+            : undefined
+        }
       >
         {/* Label - counter-rotate */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-45 pointer-events-none">

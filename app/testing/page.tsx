@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import buttonIcon from "@/public/button-icon-shrunk.svg";
 import Nav from "@/app/Components/Nav";
+import RotatingDiamondRings from "@/app/Components/RotatingDiamondStack";
 import axios from "axios";
 
 type InputStep = "name" | "city" | "processing" | "done";
@@ -161,79 +162,7 @@ const TestingPage = () => {
 				</div>
 
 				<section className="relative z-10 flex w-full max-w-3xl -translate-y-12.5 flex-col items-center gap-8 text-center">
-					  <div className="relative flex h-[min(580px,68vw)] w-[min(580px,68vw)] items-center justify-center">
-						<div
-							aria-hidden="true"
-							className="pointer-events-none absolute inset-0 z-0 animate-[spin_40s_linear_infinite]"
-						>
-							<svg
-								className="absolute inset-0 rotate-45"
-								viewBox="0 0 100 100"
-								aria-hidden="true"
-								style={{ opacity: 0.3 }}
-							>
-								<rect
-									x="1"
-									y="1"
-									width="96"
-									height="96"
-									fill="none"
-									stroke="#A0A4AB"
-									strokeOpacity="0.3"
-									strokeWidth="0.45"
-									strokeDasharray="0.1 1.4"
-									strokeLinecap="round"
-								/>
-							</svg>
-						</div>
-						<div
-							aria-hidden="true"
-							className="pointer-events-none absolute left-1/2 top-1/2 z-10 h-[93.5%] w-[93.5%] -translate-x-1/2 -translate-y-1/2 animate-[spin_56s_linear_infinite]"
-						>
-							<svg
-								className="absolute inset-0 rotate-45"
-								viewBox="0 0 100 100"
-								aria-hidden="true"
-								style={{ opacity: 0.6 }}
-							>
-								<rect
-									x="1"
-									y="1"
-									width="96"
-									height="96"
-									fill="none"
-									stroke="#A0A4AB"
-									strokeOpacity="0.6"
-									strokeWidth="0.35"
-									strokeDasharray="0.1 1.6"
-									strokeLinecap="round"
-								/>
-							</svg>
-						</div>
-						<div
-							aria-hidden="true"
-							className="pointer-events-none absolute left-1/2 top-1/2 z-10 h-[86%] w-[86%] -translate-x-1/2 -translate-y-1/2 animate-[spin_72s_linear_infinite] opacity-100"
-						>
-							<svg
-								className="absolute inset-0 rotate-45"
-								viewBox="0 0 100 100"
-								aria-hidden="true"
-								style={{ opacity: 1 }}
-							>
-								<rect
-									x="1"
-									y="1"
-									width="96"
-									height="96"
-									fill="none"
-									stroke="#A0A4AB"
-									strokeOpacity="1"
-									strokeWidth="0.3"
-									strokeDasharray="0.1 1.8"
-									strokeLinecap="round"
-								/>
-							</svg>
-						</div>
+					<RotatingDiamondRings>
 
 						<div
 							className={`absolute left-1/2 top-1/2 z-20 flex h-16.25 w-full max-w-md -translate-x-1/2 -translate-y-1/2 items-center justify-center bg-transparent pt-1 ${
@@ -291,7 +220,7 @@ const TestingPage = () => {
 								{errorMessage}
 							</p>
 						)}
-					</div>
+					</RotatingDiamondRings>
 				</section>
 			</main>
 		</div>
