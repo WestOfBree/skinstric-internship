@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import buttonIcon from "@/public/button-icon-shrunk.svg";
 import Nav from "@/app/Components/Nav";
 import { ProgressCircle } from "../Components/ProgressCircle";
+import { clearSkinstricFlowData } from "@/app/utils/storage";
 
 type SelectorType = "race" | "age" | "sex";
 
@@ -31,7 +32,6 @@ const raceOptions: SelectorOption[] = [
   { id: "east-asian", label: "East Asian" },
   { id: "latino-hispanic", label: "Latino Hispanic" },
   { id: "middle-eastern", label: "Middle Eastern" },
-  
 ];
 
 const ageOptions: SelectorOption[] = [
@@ -65,14 +65,14 @@ const selectorAliases: Record<SelectorType, string[]> = {
 
 const optionAliases: Record<SelectorType, Record<string, string[]>> = {
   race: {
-    "asian": ["asian"],
+    asian: ["asian"],
     "east-asian": ["eastasian", "east-asian", "eastasian"],
     "south-asian": ["southasian", "south-asian", "southasian"],
     "southeast-asian": ["southeastasian", "southeast-asian", "southeastasian"],
-    "black": ["black", "africanamerican", "african"],
+    black: ["black", "africanamerican", "african"],
     "latino-hispanic": ["hispanic", "latino", "latina", "latinx"],
     "middle-eastern": ["middleeastern", "middleeast"],
-    "white": ["white", "caucasian"],
+    white: ["white", "caucasian"],
   },
   age: {
     "0-2": ["0to2", "0-2", "0_2"],
@@ -91,7 +91,8 @@ const optionAliases: Record<SelectorType, Record<string, string[]>> = {
   },
 };
 
-const normalizeKey = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]/g, "");
+const normalizeKey = (value: string): string =>
+  value.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 const parseProbabilityToPercent = (rawValue: number): number => {
   if (!Number.isFinite(rawValue) || rawValue < 0) {
@@ -113,7 +114,10 @@ const collectNumericEntries = (
   entries: NumericEntry[] = [],
 ): NumericEntry[] => {
   if (typeof value === "number") {
-    entries.push({ keyPath: normalizeKey(path.join(".")), score: parseProbabilityToPercent(value) });
+    entries.push({
+      keyPath: normalizeKey(path.join(".")),
+      score: parseProbabilityToPercent(value),
+    });
     return entries;
   }
 
@@ -135,7 +139,10 @@ const collectNumericEntries = (
   return entries;
 };
 
-const getHighestOptionId = (type: SelectorType, scores: Record<string, number>): string | null => {
+const getHighestOptionId = (
+  type: SelectorType,
+  scores: Record<string, number>,
+): string | null => {
   return selectorOptionsMap[type].reduce<string | null>((highestId, option) => {
     if (!highestId) {
       return option.id;
@@ -145,35 +152,46 @@ const getHighestOptionId = (type: SelectorType, scores: Record<string, number>):
   }, null);
 };
 
-const mapApiResponseToSelectorScores = (responsePayload: unknown): SelectorScores => {
+const mapApiResponseToSelectorScores = (
+  responsePayload: unknown,
+): SelectorScores => {
   const mappedScores = createEmptyScores();
   const entries = collectNumericEntries(responsePayload);
 
-  (Object.keys(selectorOptionsMap) as SelectorType[]).forEach((selectorType) => {
-    selectorOptionsMap[selectorType].forEach((option) => {
-      // Some UI option ids may not have explicit alias entries; fall back to the id.
-      const aliases = (optionAliases[selectorType][option.id] ?? [option.id]).map(normalizeKey);
-      const selectorHints = selectorAliases[selectorType].map(normalizeKey);
+  (Object.keys(selectorOptionsMap) as SelectorType[]).forEach(
+    (selectorType) => {
+      selectorOptionsMap[selectorType].forEach((option) => {
+        // Some UI option ids may not have explicit alias entries; fall back to the id.
+        const aliases = (
+          optionAliases[selectorType][option.id] ?? [option.id]
+        ).map(normalizeKey);
+        const selectorHints = selectorAliases[selectorType].map(normalizeKey);
 
-      const matchingEntries = entries.filter((entry) =>
-        aliases.some((alias) => entry.keyPath.includes(alias)),
-      );
+        const matchingEntries = entries.filter((entry) =>
+          aliases.some((alias) => entry.keyPath.includes(alias)),
+        );
 
-      const selectorScopedEntries = matchingEntries.filter((entry) =>
-        selectorHints.some((selectorHint) => entry.keyPath.includes(selectorHint)),
-      );
+        const selectorScopedEntries = matchingEntries.filter((entry) =>
+          selectorHints.some((selectorHint) =>
+            entry.keyPath.includes(selectorHint),
+          ),
+        );
 
-      const sourceEntries = selectorScopedEntries.length > 0 ? selectorScopedEntries : matchingEntries;
-      if (sourceEntries.length === 0) {
-        return;
-      }
+        const sourceEntries =
+          selectorScopedEntries.length > 0
+            ? selectorScopedEntries
+            : matchingEntries;
+        if (sourceEntries.length === 0) {
+          return;
+        }
 
-      mappedScores[selectorType][option.id] = sourceEntries.reduce(
-        (highestScore, entry) => Math.max(highestScore, entry.score),
-        0,
-      );
-    });
-  });
+        mappedScores[selectorType][option.id] = sourceEntries.reduce(
+          (highestScore, entry) => Math.max(highestScore, entry.score),
+          0,
+        );
+      });
+    },
+  );
 
   return mappedScores;
 };
@@ -188,7 +206,9 @@ const SummaryPage = () => {
       return createEmptyScores();
     }
 
-    const rawStoredResponse = window.localStorage.getItem(PHASE_TWO_RESULT_STORAGE_KEY);
+    const rawStoredResponse = window.localStorage.getItem(
+      PHASE_TWO_RESULT_STORAGE_KEY,
+    );
     if (!rawStoredResponse) {
       return createEmptyScores();
     }
@@ -224,12 +244,15 @@ const SummaryPage = () => {
   }, [activeSelector, resolvedSelections, selectorScores]);
 
   const sortedActiveOptions = useMemo(() => {
-    return [...selectorOptionsMap[activeSelector]].sort((firstOption, secondOption) => {
-      const firstScore = selectorScores[activeSelector][firstOption.id] ?? 0;
-      const secondScore = selectorScores[activeSelector][secondOption.id] ?? 0;
+    return [...selectorOptionsMap[activeSelector]].sort(
+      (firstOption, secondOption) => {
+        const firstScore = selectorScores[activeSelector][firstOption.id] ?? 0;
+        const secondScore =
+          selectorScores[activeSelector][secondOption.id] ?? 0;
 
-      return secondScore - firstScore;
-    });
+        return secondScore - firstScore;
+      },
+    );
   }, [activeSelector, selectorScores]);
 
   const setActiveOption = (type: SelectorType, id: string) => {
@@ -256,7 +279,9 @@ const SummaryPage = () => {
       return "Placeholder";
     }
 
-    const selectedOption = getOptionsForSelector(type).find((option) => option.id === selectedId);
+    const selectedOption = getOptionsForSelector(type).find(
+      (option) => option.id === selectedId,
+    );
     return selectedOption?.label ?? "Placeholder";
   };
 
@@ -325,7 +350,7 @@ const SummaryPage = () => {
               }`}
               aria-label="Select sex section"
             >
-             <p className="text-base">{getSelectedOptionLabel("sex")}</p>
+              <p className="text-base">{getSelectedOptionLabel("sex")}</p>
               <h4 className="text-base">SEX</h4>
             </div>
           </div>
@@ -343,30 +368,39 @@ const SummaryPage = () => {
             </div>
           </div>
 
-            {/* Right Section - Bulleted List  */}
+          {/* Right Section - Bulleted List  */}
           <div className="bg-gray-100 pt-4 pb-4 md:border-t">
             <div className="space-y-0">
-                <div className="uppercase flex justify-between px-4 text-base leading-6 tracking-tight font-medium mb-2">
-              <h4>{getSelectorLabel(activeSelector)}</h4>
-              <h4>A.I Confidence</h4>
-                </div>
-            {sortedActiveOptions.map((option) => (
-              <button
-                key={option.id}
-                onClick={() => setActiveOption(activeSelector, option.id)}
-                className={`w-full p-3 cursor-pointer text-left text-sm font-semibold transition-colors ${
-                  getSelectedOptionId(activeSelector) === option.id
-                    ? "bg-[#1A1B1C] text-white"
-                    : "bg-[#F3F3F4] hover:bg-[#E1E1E2] text-[#1A1B1C]"
-                }`}
-                aria-label={`Select ${option.label}`}
-              >
-                <span className="flex items-center justify-between">
-                  <span>{option.label}</span>
-                  <span>{formatPercent(selectorScores[activeSelector][option.id] ?? 0)}</span>
-                </span>
-              </button>
-            ))}
+              <div className="uppercase flex justify-between px-4 text-base leading-6 tracking-tight font-medium mb-2">
+                <h4>{getSelectorLabel(activeSelector)}</h4>
+                <h4>A.I Confidence</h4>
+              </div>
+              {sortedActiveOptions.map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => setActiveOption(activeSelector, option.id)}
+                  className={`w-full p-3 cursor-pointer text-left text-sm font-semibold transition-colors ${
+                    getSelectedOptionId(activeSelector) === option.id
+                      ? "bg-[#1A1B1C] text-white"
+                      : "bg-[#F3F3F4] hover:bg-[#E1E1E2] text-[#1A1B1C]"
+                  }`}
+                  aria-label={`Select ${option.label}`}
+                >
+                  <span className="flex items-center justify-between">
+                    <div className="flex flex-row items-center">
+                      <div className="border h-3 w-3 mr-2 rotate-45">
+                        <div className={`bg-white mr-1 h-1.5 w-1.5 translate-x-0.5 translate-y-0.5 ${getSelectedOptionId(activeSelector) === option.id ? "visible" : "hidden"}`}></div>
+                      </div>
+                      <span>{option.label}</span>
+                    </div>
+                    <span>
+                      {formatPercent(
+                        selectorScores[activeSelector][option.id] ?? 0,
+                      )}
+                    </span>
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -395,6 +429,7 @@ const SummaryPage = () => {
 
           <Link
             href="/"
+            onClick={clearSkinstricFlowData}
             aria-label="Proceed"
             className="group inline-flex h-9 items-center justify-center gap-4 whitespace-nowrap rounded-md text-sm font-semibold text-[#1A1B1C] transition-colors"
           >
