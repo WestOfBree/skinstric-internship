@@ -165,7 +165,7 @@ const TestingPage = () => {
 					<RotatingDiamondRings>
 
 						<div
-							className={`absolute left-1/2 top-1/2 z-20 flex h-16.25 w-full max-w-md -translate-x-1/2 -translate-y-1/2 items-center justify-center bg-transparent pt-1 ${
+							className={`absolute left-1/2 top-1/2 z-20 flex h-16.25 w-full max-w-[min(90vw,40rem)] -translate-x-1/2 -translate-y-1/2 items-center justify-center bg-transparent pt-1 ${
 								step === "name" || step === "city" ? "border-b border-[#1A1B1C]" : ""
 							}`}
 						>
@@ -195,7 +195,7 @@ const TestingPage = () => {
 											setCityValue(event.target.value);
 										}}
 										onKeyDown={handleKeyDown}
-										className="h-full w-full bg-transparent text-center text-[54px] leading-none text-[#1A1B1C] placeholder:text-[#1A1B1C] focus:outline-none focus:bg-white"
+										className="h-full w-full bg-transparent px-3 text-center text-[clamp(1.6rem,7.4vw,3rem)] leading-none text-[#1A1B1C] placeholder:text-[#1A1B1C] focus:outline-none focus:bg-white"
 									/>
 								</>
 							)}

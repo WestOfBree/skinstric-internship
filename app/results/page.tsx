@@ -12,16 +12,28 @@ import galleryTitle from "@/public/gallery-title.svg";
 import cameraTitle from "@/public/camera-title.svg";
 import DiamondStack from "@/app/Components/DiamondStack";
 import axios from "axios";
+import Popup from "@/app/Components/Popup";
+import { getStoredUploadedImage, setStoredUploadedImage } from "@/app/utils/storage";
 
 const PHASE_TWO_RESULT_STORAGE_KEY = "skinstric:phaseTwoResult";
 
 const ResultsPage = () => {
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [uploadedImage, setUploadedImage] = useState<string | null>(() => getStoredUploadedImage());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const [isPhaseTwoSubmitting, setIsPhaseTwoSubmitting] = useState(false);
   const [hasTriedProceedWithoutImage, setHasTriedProceedWithoutImage] = useState(false);
   const [phaseTwoError, setPhaseTwoError] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleCameraAllow = () => {
+    setIsOpen(false);
+    router.push("/Camera");
+  };
+
+  const handleCameraDeny = () => {
+    setIsOpen(false);
+  };
 
   const submitPhaseTwo = async (name: string, city: string, image: string) => {
     const response = await axios.post(
@@ -47,6 +59,7 @@ const ResultsPage = () => {
     reader.onload = (e) => {
       const base64String = e.target?.result as string;
       setUploadedImage(base64String);
+      setStoredUploadedImage(base64String);
     };
     reader.readAsDataURL(file);
   };
@@ -191,13 +204,20 @@ const ResultsPage = () => {
         </div>
 
         {/* Two diamond stacks */}
-        <section className="relative z-10 flex w-full -translate-y-12.5 items-center justify-around">
-          <div className="relative flex-none">
+        <section className="relative z-10 flex w-full -translate-y-12.5 flex-col items-center justify-center gap-8 md:flex-row md:justify-around md:gap-0">
+          <div className="relative flex-none cursor-pointer" onClick={() => setIsOpen(true)}>
             <DiamondStack icon={cameraIcon} />
             <Image
               src={cameraTitle}
               alt="Allow A.I. to scan your face"
-              className="pointer-events-none absolute left-[66%] top-[25%] w-[min(210px,19vw)] max-w-none"
+              className="absolute left-[66%] top-[25%] w-[min(210px,19vw)] max-w-none "
+              
+            />
+            <Popup
+              isOpen={isOpen}
+              setIsOpen={setIsOpen}
+              onAllow={handleCameraAllow}
+              onDeny={handleCameraDeny}
             />
           </div>
 
